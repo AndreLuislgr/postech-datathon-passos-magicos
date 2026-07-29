@@ -90,9 +90,6 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-**App em produção:** [link do deploy no Streamlit Community Cloud aqui]
-
-## 📹 5. Vídeo de apresentação
 
 [link do vídeo aqui]
 
@@ -101,6 +98,3 @@ streamlit run app.py
 Base de dados e dicionário de dados fornecidos pela PosTech/Associação
 Passos Mágicos (Datathon Fase 5).
 
-## 👤 Autor
-
-André — Datathon PosTech, Fase 5.
