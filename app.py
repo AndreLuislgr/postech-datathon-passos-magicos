@@ -67,7 +67,11 @@ with st.form("form_aluno"):
     with col3:
         ano_ingresso = st.number_input("Ano de ingresso na Passos Mágicos", min_value=2010, max_value=2024, value=2022)
     with col4:
-        ano_referencia = st.number_input("Ano de referência (ano atual)", min_value=2020, max_value=2030, value=2024)
+        ano_referencia = st.number_input(
+            "Ano de referência (ano atual)", min_value=2022, max_value=2026, value=2024,
+            help="O modelo foi treinado com dados de 2022 a 2024. Anos fora desse "
+                 "intervalo geram uma extrapolação — o app avisa quando isso acontece."
+        )
 
     enviado = st.form_submit_button("Calcular risco", use_container_width=True)
 
@@ -75,13 +79,21 @@ with st.form("form_aluno"):
 # Predição
 # -----------------------------------------------------------------------
 if enviado:
+    tempo_na_pm = ano_referencia - ano_ingresso
+
     entrada = pd.DataFrame([{
         "IAN": ian, "IDA": ida, "IEG": ieg, "IAA": iaa, "IPS": ips, "IPP": ipp,
         "IPV": ipv, "INDE": inde, "DEFASAGEM": defasagem, "IDADE": idade,
         "GAP_ENGAJAMENTO_APRENDIZAGEM": ieg - ida,
-        "TEMPO_NA_PM": ano_referencia - ano_ingresso,
+        "TEMPO_NA_PM": tempo_na_pm,
         "PEDRA": pedra, "GENERO": genero,
     }])
+
+    if ano_referencia > 2024:
+        st.warning(
+            "⚠️ Fora do período de treino do modelo (2022–2024) — o resultado "
+            "abaixo é uma extrapolação e pode ser menos confiável."
+        )
 
     probabilidade = modelo.predict_proba(entrada)[0, 1]
     classe = modelo.predict(entrada)[0]
