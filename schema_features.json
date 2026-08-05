@@ -1,0 +1,20 @@
+{
+  "numericas": [
+    "IAN",
+    "IDA",
+    "IEG",
+    "IAA",
+    "IPS",
+    "IPP",
+    "IPV",
+    "INDE",
+    "DEFASAGEM",
+    "IDADE",
+    "GAP_ENGAJAMENTO_APRENDIZAGEM",
+    "TEMPO_NA_PM"
+  ],
+  "categoricas": [
+    "PEDRA",
+    "GENERO"
+  ]
+}

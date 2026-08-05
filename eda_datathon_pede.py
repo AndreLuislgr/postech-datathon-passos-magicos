@@ -214,6 +214,12 @@ salvar(fig, "q10_inde_por_pedra")
 pv_por_ano = df.groupby("ANO")["PONTO_VIRADA"].apply(lambda s: s.map({True: 1, False: 0}).mean() * 100)
 print("\nTaxa de Ponto de Virada por ano (%):")
 print(pv_por_ano.round(1))
+anos_sem_dado_pv = pv_por_ano[pv_por_ano.isna()].index.tolist()
+if anos_sem_dado_pv:
+    print(f"AVISO: {anos_sem_dado_pv} aparecem como NaN porque a coluna "
+          f"'Atingiu PV' está 100% ausente na planilha original nesses anos "
+          f"(confirmado -- não é erro de leitura). Não usar esses anos para "
+          f"comparação de Ponto de Virada na apresentação sem citar essa limitação.")
 
 
 print("\n\nGráficos salvos em:", PASTA_SAIDA)
