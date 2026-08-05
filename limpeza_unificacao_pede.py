@@ -18,7 +18,24 @@ import numpy as np
 import unicodedata
 import re
 
-CAMINHO_XLSX = "/mnt/user-data/uploads/1785287212421_BASE_DE_DADOS_PEDE_2024_-_DATATHON.xlsx"
+CAMINHO_XLSX = (
+    "https://raw.githubusercontent.com/AndreLuislgr/"
+    "postech-datathon-passos-magicos/main/"
+    "BASE%20DE%20DADOS%20PEDE%202024%20-%20DATATHON.xlsx"
+)
+# Lendo direto do repositório GitHub (pandas aceita URL normalmente).
+# Repare que o nome do arquivo no repositório usa ESPAÇOS
+# ("BASE DE DADOS PEDE 2024 - DATATHON.xlsx"), por isso o link usa "%20"
+# no lugar dos espaços (codificação de URL).
+#
+# Se preferir rodar localmente em vez de puxar do GitHub, troque a linha
+# acima por um caminho relativo simples, com o arquivo na mesma pasta do
+# script, por exemplo:
+#
+# CAMINHO_XLSX = "BASE DE DADOS PEDE 2024 - DATATHON.xlsx"
+#
+# Evite caminhos absolutos (tipo "/mnt/..." ou "C:\Users\...") -- eles
+# quebram assim que o script roda em outra máquina/ambiente.
 
 # ---------------------------------------------------------------------------
 # 1. Mapeamento de colunas: nome original (por aba) -> nome padronizado
@@ -252,9 +269,16 @@ def limpar_tipos(df):
     for col in ["PONTO_VIRADA", "INDICADO_BOLSA"]:
         df[col] = df[col].map(mapa_bool).where(df[col].isin(mapa_bool.keys()), df[col])
 
-    # Pedra: padroniza capitalização e remove espaços
+    # Pedra: padroniza capitalização, acentuação e remove espaços.
+    # A planilha mistura "Agata" (sem acento) e "Ágata" (com acento) como se
+    # fossem categorias diferentes -- normalizamos para uma só.
     df["PEDRA"] = df["PEDRA"].astype(str).str.strip().str.title()
     df.loc[df["PEDRA"].isin(["Nan", "None", ""]), "PEDRA"] = np.nan
+    df["PEDRA"] = df["PEDRA"].replace({"Agata": "Ágata"})
+    # "Incluir" não é uma classificação de Pedra válida -- aparece como
+    # placeholder para alunos sem INDE calculado ainda (ex.: recém-ingressos
+    # em 2024 sem avaliação completa). Tratamos como dado ausente.
+    df.loc[df["PEDRA"] == "Incluir", "PEDRA"] = np.nan
 
     # Gênero: padroniza (Menina/Feminino -> Feminino, Menino/Masculino -> Masculino)
     mapa_genero = {
@@ -297,11 +321,35 @@ def validar(df):
     print("\nNulos por coluna (top 15):")
     print(df.isna().sum().sort_values(ascending=False).head(15))
 
+    # Aviso explícito: algumas colunas são 100% nulas em certos anos porque a
+    # planilha ORIGINAL não preenche esses campos nesses anos (confirmado por
+    # inspeção manual) -- não é um bug de leitura/merge deste script.
+    colunas_possivelmente_ausentes_por_ano = [
+        "CG", "CF", "CT", "PONTO_VIRADA", "REC_PSICO",
+        "DESTAQUE_IEG", "DESTAQUE_IDA", "DESTAQUE_IPV",
+    ]
+    print("\nCobertura por ano das colunas frequentemente ausentes na fonte "
+          "(pode ser 0% em determinado ano -- isso é um buraco da planilha "
+          "original, não erro deste script):")
+    for col in colunas_possivelmente_ausentes_por_ano:
+        cobertura = df.groupby("ANO")[col].apply(lambda s: s.notna().mean() * 100)
+        print(f"  {col}: " + ", ".join(f"{int(ano)}={p:.0f}%" for ano, p in cobertura.items()))
+
     faixa_indicadores = ["INDE", "IAN", "IDA", "IEG", "IAA", "IPS", "IPP", "IPV"]
+    print("\nValores fora da faixa 0-10 (na maioria dos casos é ruído de "
+          "arredondamento da planilha original, ex.: 10.002 em vez de 10.0 -- "
+          "não costuma ser erro de dado real; vale checar caso a caso se o "
+          "excesso for grande):")
+    algum_fora_faixa = False
     for col in faixa_indicadores:
         fora_faixa = df[(df[col] < 0) | (df[col] > 10)][col].dropna()
         if len(fora_faixa) > 0:
-            print(f"ATENÇÃO: {len(fora_faixa)} valores fora da faixa 0-10 em {col}")
+            algum_fora_faixa = True
+            excesso_max = max((fora_faixa - 10).max(), (0 - fora_faixa).max())
+            print(f"  {col}: {len(fora_faixa)} valores (desvio máx. de {excesso_max:.3f} "
+                  f"em relação ao limite 0-10)")
+    if not algum_fora_faixa:
+        print("  Nenhum valor fora da faixa 0-10.")
 
 
 def main():
@@ -317,7 +365,7 @@ def main():
 
     validar(df_long)
 
-    df_long.to_csv("/mnt/user-data/outputs/pede_unificado_long.csv", index=False, encoding="utf-8-sig")
+    df_long.to_csv("pede_unificado_long.csv", index=False, encoding="utf-8-sig")
     print("\nSalvo: pede_unificado_long.csv (uma linha por aluno-ano)")
 
     # Versão wide: uma linha por aluno, colunas com sufixo do ano
@@ -330,7 +378,7 @@ def main():
     )
     df_wide.columns = [f"{col}_{int(ano)}" for col, ano in df_wide.columns]
     df_wide = df_wide.reset_index()
-    df_wide.to_csv("/mnt/user-data/outputs/pede_unificado_wide.csv", index=False, encoding="utf-8-sig")
+    df_wide.to_csv("pede_unificado_wide.csv", index=False, encoding="utf-8-sig")
     print("Salvo: pede_unificado_wide.csv (uma linha por aluno, colunas por ano)")
 
 
